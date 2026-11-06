@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Riesgo de inasistencia</title>
+    <meta name="_csrf" th:content="${_csrf != null} ? ${_csrf.token} : ''">
+    <meta name="_csrf_header" th:content="${_csrf != null} ? ${_csrf.headerName} : 'X-CSRF-TOKEN'">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --surface: #fcfcfb; --page: #f4f3f0; --border: #e3e2dd;
+            --text: #0b0b0b; --text-2: #52514e; --text-3: #7a7974; --grid: #e9e8e4;
+            --series: #2a78d6;
+            --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
+            --good-text: #006300; --warn-text: #7a5200; --crit-text: #a52626;
+            --seq-0: #cde2fb; --seq-1: #86b6ef; --seq-2: #3987e5; --seq-3: #1c5cab; --seq-4: #0d366b;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:where(:not([data-theme="light"])) {
+                color-scheme: dark;
+                --surface: #1a1a19; --page: #121211; --border: #2e2e2b;
+                --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86; --grid: #2b2b29;
+                --series: #3987e5;
+                --good-text: #5fd35f; --warn-text: #fab219; --crit-text: #ec7a7a;
+            }
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --surface: #1a1a19; --page: #121211; --border: #2e2e2b;
+            --text: #ffffff; --text-2: #c3c2b7; --text-3: #8f8e86; --grid: #2b2b29;
+            --series: #3987e5;
+            --good-text: #5fd35f; --warn-text: #fab219; --crit-text: #ec7a7a;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--page); color: var(--text); }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+        .card-v { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; height: 100%; }
+        .card-v h2 { font-size: 1rem; font-weight: 600; margin: 0 0 2px; }
+        .card-v .sub { color: var(--text-2); font-size: .82rem; margin-bottom: 12px; }
+        .kpi { display: flex; gap: 14px; align-items: center; }
+        .kpi .num { font-size: 2.2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+        .kpi .lbl { color: var(--text-2); font-size: .85rem; }
+        .kpi i { font-size: 1.6rem; }
+        .kpi.rojo i, .kpi.rojo .num { color: var(--crit-text); }
+        .kpi.amarillo i, .kpi.amarillo .num { color: var(--warn-text); }
+        .kpi.verde i, .kpi.verde .num { color: var(--good-text); }
+        .chart-box { position: relative; height: 300px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .8rem; color: var(--text-2); margin-bottom: 8px; }
+        .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; background: var(--c); }
+        .heat { width: 100%; border-collapse: separate; border-spacing: 2px; font-size: .85rem; }
+        .heat th { font-weight: 500; color: var(--text-2); text-align: center; padding: 4px; }
+        .heat th:first-child { text-align: left; }
+        .heat td { text-align: center; padding: 14px 4px; border-radius: 4px; font-variant-numeric: tabular-nums; font-weight: 600; }
+        .badge-n { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 600; }
+        .badge-n.ROJO, .badge-n.ALTA { color: var(--crit-text); }
+        .badge-n.AMARILLO, .badge-n.MEDIA { color: var(--warn-text); }
+        .badge-n.VERDE, .badge-n.BAJA { color: var(--good-text); }
+        .pbar { height: 6px; border-radius: 3px; background: var(--grid); width: 90px; display: inline-block; vertical-align: middle; margin-right: 8px; overflow: hidden; }
+        .pbar > i { display: block; height: 100%; background: var(--series); }
+        table.tbl { width: 100%; font-size: .85rem; }
+        table.tbl th { color: var(--text-2); font-weight: 500; border-bottom: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+        table.tbl td { padding: 7px 8px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+        .scroll { max-height: 380px; overflow: auto; }
+        .tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); font-size: .78rem; padding: 6px 9px; border-radius: 6px; z-index: 50; display: none; }
+        .warn-box { border-left: 3px solid var(--warn); background: var(--page); padding: 8px 12px; font-size: .82rem; color: var(--text-2); border-radius: 4px; margin-top: 10px; }
+        .form-select, .form-control { background: var(--surface); color: var(--text); border-color: var(--border); }
+        .stat { font-size: .82rem; color: var(--text-2); }
+        .stat b { color: var(--text); font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h4 mb-0 fw-bold">Riesgo de inasistencia</h1>
+            <div class="stat" id="subtitulo">Cargando…</div>
+        </div>
+        <a href="/coordinador/dashboard" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver al panel</a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4"><div class="card-v kpi rojo"><i class="bi bi-x-octagon-fill"></i><div><div class="num" id="kRojo">–</div><div class="lbl">Pierden la materia <span id="kUmbral"></span></div></div></div></div>
+        <div class="col-12 col-md-4"><div class="card-v kpi amarillo"><i class="bi bi-exclamation-triangle-fill"></i><div><div class="num" id="kAmarillo">–</div><div class="lbl">En riesgo (aviso temprano)</div></div></div></div>
+        <div class="col-12 col-md-4"><div class="card-v kpi verde"><i class="bi bi-check-circle-fill"></i><div><div class="num" id="kVerde">–</div><div class="lbl">Sin riesgo</div></div></div></div>
+    </div>
+
+    <div class="card-v mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label stat mb-1" for="fClase">Materia</label>
+                <select id="fClase" class="form-select form-select-sm"><option value="">Todas</option></select>
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label stat mb-1" for="fFecha">Fecha a predecir</label>
+                <input id="fFecha" type="date" class="form-control form-control-sm">
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button id="btnAplicar" class="btn btn-primary btn-sm">Actualizar</button>
+                <button id="btnReentrenar" class="btn btn-outline-secondary btn-sm" title="Reentrenar el modelo con los datos actuales">Reentrenar modelo</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-7">
+            <div class="card-v">
+                <h2>Alumnos con mayor inasistencia</h2>
+                <div class="sub">% de clases con ausencia por alumno y materia. La línea marca el umbral para perder la materia.</div>
+                <div class="legend" id="legendNivel"></div>
+                <div class="chart-box"><canvas id="cBarras" role="img" aria-label="Barras de porcentaje de inasistencia por alumno y materia"></canvas></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="card-v">
+                <h2>Tendencia mensual de ausencias</h2>
+                <div class="sub">% de registros con estado Ausente en cada mes.</div>
+                <div class="chart-box"><canvas id="cLinea" role="img" aria-label="Línea de porcentaje de ausencias por mes"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-5">
+            <div class="card-v">
+                <h2>Mapa de calor: materia × día</h2>
+                <div class="sub">% de ausencia. Más oscuro = más ausencias.</div>
+                <div id="heat"></div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-7">
+            <div class="card-v">
+                <h2>Inasistencia actual vs. probabilidad de faltar</h2>
+                <div class="sub">Cada punto es un alumno en una materia. Arriba a la derecha: los casos más urgentes.</div>
+                <div class="chart-box"><canvas id="cDisp" role="img" aria-label="Dispersión de inasistencia contra probabilidad de falta"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-8">
+            <div class="card-v">
+                <h2>Quién podría faltar: <span id="tFecha"></span></h2>
+                <div class="sub">Probabilidad estimada por el modelo, de mayor a menor.</div>
+                <div class="scroll">
+                    <table class="tbl" id="tblPred">
+                        <thead><tr><th>Alumno</th><th>Materia</th><th>Prob. de falta</th><th>Nivel</th><th>Faltas últ. 5</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card-v">
+                <h2>Calidad del modelo</h2>
+                <div class="sub" id="mAlgoritmo">–</div>
+                <div class="stat">Ejemplos de entrenamiento: <b id="mN">–</b></div>
+                <div class="stat">Tasa base de ausencia: <b id="mBase">–</b></div>
+                <div class="stat">Exactitud: <b id="mAcc">–</b></div>
+                <div class="stat">AUC (0.5 = azar, 1 = perfecto): <b id="mAuc">–</b></div>
+                <div class="stat">Precisión / Recall (ausencia): <b id="mPR">–</b></div>
+                <div class="warn-box" id="mAdv" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+(function () {
+    'use strict';
+    var API = '/coordinador/riesgo/api';
+    var ICON = { ROJO: 'bi-x-octagon-fill', AMARILLO: 'bi-exclamation-triangle-fill', VERDE: 'bi-check-circle-fill',
+                 ALTA: 'bi-x-octagon-fill', MEDIA: 'bi-exclamation-triangle-fill', BAJA: 'bi-check-circle-fill' };
+    var charts = {};
+    var state = { alumnos: [], pred: [], umbral: 25 };
+
+    function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function esc(s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+    function pct(v) { return (v == null ? '–' : v.toFixed(1) + '%'); }
+    function nivelColor(n) { return n === 'ROJO' ? css('--crit') : n === 'AMARILLO' ? css('--warn') : css('--good'); }
+
+    function get(path) {
+        return fetch(API + path, { headers: { 'Accept': 'application/json' } }).then(function (r) {
+            return r.json().then(function (body) {
+                if (!r.ok) { throw new Error(body && body.mensaje ? body.mensaje : 'Error ' + r.status); }
+                return body;
+            });
+        });
+    }
+    function qs(o) {
+        var p = Object.keys(o).filter(function (k) { return o[k]; })
+            .map(function (k) { return k + '=' + encodeURIComponent(o[k]); }).join('&');
+        return p ? '?' + p : '';
+    }
+    function mostrarError(msg) {
+        document.getElementById('subtitulo').textContent = 'No se pudo cargar: ' + msg;
+    }
+
+    // ---------------------------------------------------------------- KPIs y filtros
+    function cargarResumen() {
+        return get('/resumen').then(function (r) {
+            state.umbral = r.umbralPerdida;
+            document.getElementById('kRojo').textContent = r.rojo;
+            document.getElementById('kAmarillo').textContent = r.amarillo;
+            document.getElementById('kVerde').textContent = r.verde;
+            document.getElementById('kUmbral').textContent = '(≥ ' + r.umbralPerdida + '%)';
+            document.getElementById('subtitulo').textContent = r.totalAlumnoMateria + ' combinaciones alumno–materia · umbral ' +
+                r.umbralPerdida + '% · aviso desde ' + r.umbralAlerta + '%';
+        });
+    }
+    function cargarClases() {
+        return get('/clases').then(function (cl) {
+            var sel = document.getElementById('fClase');
+            cl.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+        });
+    }
+
+    // ---------------------------------------------------------------- barras (ranking)
+    function tooltipExterno() {
+        var tip = document.getElementById('tip');
+        return {
+            show: function (e, html) { tip.innerHTML = html; tip.style.display = 'block'; tip.style.left = (e.clientX + 12) + 'px'; tip.style.top = (e.clientY + 12) + 'px'; },
+            hide: function () { tip.style.display = 'none'; }
+        };
+    }
+    var TIP = tooltipExterno();
+
+    function dibujarBarras() {
+        var top = state.alumnos.slice(0, 12);
+        var ctx = document.getElementById('cBarras');
+        if (charts.barras) charts.barras.destroy();
+        charts.barras = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: top.map(function (a) { return a.alumno + ' · ' + a.clase; }),
+                datasets: [
+                    { type: 'bar', label: '% inasistencia', data: top.map(function (a) { return a.porcentajeInasistencia; }),
+                      backgroundColor: top.map(function (a) { return nivelColor(a.nivel); }), borderRadius: 4, borderSkipped: 'bottom', maxBarThickness: 28 },
+                    { type: 'line', label: 'Umbral ' + state.umbral + '%', data: top.map(function () { return state.umbral; }),
+                      borderColor: css('--text-2'), borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: {
+                    afterLabel: function (c) { var a = top[c.dataIndex]; return c.datasetIndex === 0 ? a.ausencias + ' ausencias · proyectado ' + pct(a.porcentajeProyectado) + ' · ' + a.nivel : ''; } } } },
+                scales: {
+                    x: { ticks: { color: css('--text-2'), maxRotation: 55, minRotation: 55, font: { size: 10 } }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: css('--text-2'), callback: function (v) { return v + '%'; } }, grid: { color: css('--grid') } }
+                }
+            }
+        });
+        var lg = document.getElementById('legendNivel');
+        lg.innerHTML = ['ROJO|Pierde la materia', 'AMARILLO|En riesgo', 'VERDE|Sin riesgo'].map(function (s) {
+            var p = s.split('|'); return '<span style="--c:' + nivelColor(p[0]) + '">' + p[1] + '</span>';
+        }).join('');
+    }
+
+    // ---------------------------------------------------------------- línea
+    function dibujarLinea(t) {
+        if (charts.linea) charts.linea.destroy();
+        charts.linea = new Chart(document.getElementById('cLinea'), {
+            type: 'line',
+            data: { labels: t.meses, datasets: [{ label: '% ausencia', data: t.porcentajeAusencia, borderColor: css('--series'),
+                backgroundColor: css('--series'), borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: css('--series'),
+                pointBorderColor: css('--surface'), pointBorderWidth: 2, tension: 0.25 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { display: false }, tooltip: { callbacks: {
+                    label: function (c) { return c.parsed.y.toFixed(1) + '% de ausencia (' + t.registros[c.dataIndex] + ' registros)'; } } } },
+                scales: {
+                    x: { ticks: { color: css('--text-2') }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: css('--text-2'), callback: function (v) { return v + '%'; } }, grid: { color: css('--grid') } }
+                }
+            }
+        });
+    }
+
+    // ---------------------------------------------------------------- mapa de calor (tabla)
+    function dibujarHeat(m) {
+        var vals = [].concat.apply([], m.valores).filter(function (v) { return v != null; });
+        var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+        var ramp = [css('--seq-0'), css('--seq-1'), css('--seq-2'), css('--seq-3'), css('--seq-4')];
+        function bucket(v) { var t = max === min ? 0.5 : (v - min) / (max - min); return Math.min(4, Math.floor(t * 5)); }
+        var h = '<table class="heat"><thead><tr><th></th>' + m.dias.map(function (d) { return '<th>' + esc(d) + '</th>'; }).join('') + '</tr></thead><tbody>';
+        m.clases.forEach(function (c, i) {
+            h += '<tr><th scope="row">' + esc(c) + '</th>';
+            m.valores[i].forEach(function (v) {
+                if (v == null) { h += '<td style="color:var(--text-3)">–</td>'; return; }
+                var b = bucket(v);
+                h += '<td style="background:' + ramp[b] + ';color:' + (b >= 2 ? '#fff' : '#0b0b0b') + '" title="' + v.toFixed(1) + '% de ausencia">' + v.toFixed(1) + '%</td>';
+            });
+            h += '</tr>';
+        });
+        document.getElementById('heat').innerHTML = h + '</tbody></table>' +
+            '<div class="stat mt-2">Rango: ' + min.toFixed(1) + '% – ' + max.toFixed(1) + '%. Si los colores son parecidos, el día casi no influye.</div>';
+    }
+
+    // ---------------------------------------------------------------- dispersión
+    function dibujarDispersion() {
+        var probMap = {};
+        state.pred.forEach(function (p) { probMap[p.alumno + '|' + p.clase] = p.probabilidadFalta; });
+        var puntos = state.alumnos.filter(function (a) { return probMap[a.alumno + '|' + a.clase] != null; })
+            .map(function (a) { return { x: a.porcentajeInasistencia, y: probMap[a.alumno + '|' + a.clase] * 100, a: a }; });
+        if (charts.disp) charts.disp.destroy();
+        charts.disp = new Chart(document.getElementById('cDisp'), {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Alumno–materia', data: puntos, pointRadius: 5, pointHoverRadius: 8,
+                backgroundColor: puntos.map(function (p) { return nivelColor(p.a.nivel); }),
+                borderColor: css('--surface'), borderWidth: 2 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: {
+                    label: function (c) { var p = c.raw; return p.a.alumno + ' · ' + p.a.clase; },
+                    afterLabel: function (c) { return 'Inasistencia ' + c.raw.x.toFixed(1) + '% · prob. falta ' + c.raw.y.toFixed(1) + '%'; } } } },
+                scales: {
+                    x: { title: { display: true, text: '% inasistencia actual', color: css('--text-2') }, ticks: { color: css('--text-2') }, grid: { color: css('--grid') } },
+                    y: { title: { display: true, text: 'Probabilidad de falta (%)', color: css('--text-2') }, ticks: { color: css('--text-2') }, grid: { color: css('--grid') } }
+                }
+            }
+        });
+    }
+
+    // ---------------------------------------------------------------- tabla de predicciones y modelo
+    function dibujarTabla() {
+        document.getElementById('tFecha').textContent = document.getElementById('fFecha').value;
+        var body = document.querySelector('#tblPred tbody');
+        body.innerHTML = state.pred.slice(0, 40).map(function (p) {
+            return '<tr><td>' + esc(p.alumno) + '</td><td>' + esc(p.clase) + '</td>' +
+                '<td><span class="pbar"><i style="width:' + Math.min(100, p.probabilidadFalta * 100) + '%"></i></span>' + (p.probabilidadFalta * 100).toFixed(1) + '%</td>' +
+                '<td><span class="badge-n ' + p.nivel + '"><i class="bi ' + ICON[p.nivel] + '"></i>' + p.nivel + '</span></td>' +
+                '<td>' + p.ausenciasUltimas5 + ' / 5</td></tr>';
+        }).join('');
+    }
+    function dibujarModelo(m) {
+        document.getElementById('mAlgoritmo').textContent = m.algoritmo;
+        document.getElementById('mN').textContent = m.instanciasEntrenamiento;
+        document.getElementById('mBase').textContent = (m.tasaBaseAusencia * 100).toFixed(1) + '%';
+        document.getElementById('mAcc').textContent = (m.accuracy * 100).toFixed(1) + '%';
+        document.getElementById('mAuc').textContent = m.aucAusencia.toFixed(2);
+        document.getElementById('mPR').textContent = (m.precisionAusencia * 100).toFixed(0) + '% / ' + (m.recallAusencia * 100).toFixed(0) + '%';
+        var adv = document.getElementById('mAdv');
+        if (m.advertencia) { adv.textContent = m.advertencia; adv.style.display = 'block'; } else { adv.style.display = 'none'; }
+    }
+
+    // ---------------------------------------------------------------- orquestación
+    function cargarTodo() {
+        var clase = document.getElementById('fClase').value;
+        var fecha = document.getElementById('fFecha').value;
+        return Promise.all([get('/alumnos' + qs({ clase: clase })), get('/prediccion' + qs({ fecha: fecha, clase: clase })).catch(function (e) { return { error: e.message }; })])
+            .then(function (res) {
+                state.alumnos = res[0];
+                state.pred = Array.isArray(res[1]) ? res[1] : [];
+                dibujarBarras();
+                dibujarDispersion();
+                dibujarTabla();
+                if (!Array.isArray(res[1])) {
+                    document.querySelector('#tblPred tbody').innerHTML = '<tr><td colspan="5">' + esc(res[1].error) + '</td></tr>';
+                }
+            });
+    }
+    function init() {
+        document.getElementById('fFecha').value = new Date().toISOString().slice(0, 10);
+        cargarResumen().then(cargarClases).then(function () {
+            return Promise.all([cargarTodo(), get('/tendencia').then(dibujarLinea), get('/mapa-calor').then(dibujarHeat),
+                get('/modelo').then(dibujarModelo).catch(function (e) { document.getElementById('mAdv').style.display = 'block'; document.getElementById('mAdv').textContent = e.message; })]);
+        }).catch(function (e) { mostrarError(e.message); });
+    }
+    document.getElementById('btnAplicar').addEventListener('click', function () { cargarTodo().catch(function (e) { mostrarError(e.message); }); });
+    document.getElementById('btnReentrenar').addEventListener('click', function () {
+        fetch(API + '/modelo/reentrenar', { method: 'POST', headers: csrfHeaders() }).then(function (r) { return r.json(); })
+            .then(function (m) { if (m.mensaje) throw new Error(m.mensaje); dibujarModelo(m); return cargarTodo(); }).catch(function (e) { mostrarError(e.message); });
+    });
+    function csrfHeaders() {
+        var t = document.querySelector('meta[name="_csrf"]'), h = document.querySelector('meta[name="_csrf_header"]');
+        var o = {}; if (t && h && t.content) { o[h.content] = t.content; } return o;
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { cargarTodo(); });
+    init();
+})();
+</script>
+</body>
+</html>

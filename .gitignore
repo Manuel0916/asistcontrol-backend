@@ -1,0 +1,26 @@
+HELP.md
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### Variables de entorno ###
+*.env
+*.env*
+.env
+**/*.env
+*/*.env
+
+### VS Code ###
+.vscode/
+# Compilados (Render los genera)
+target/

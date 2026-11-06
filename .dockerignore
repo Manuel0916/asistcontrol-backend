@@ -1,0 +1,19 @@
+# ---------------------------
+# Control de versiones
+# ---------------------------
+.git/
+.gitignore
+
+# ---------------------------
+# Docker y Compose
+# ---------------------------
+Dockerfile
+Dockerfile*
+docker-compose*
+compose.y*ml
+# ---------------------------
+# Compilados e IDE (no se suben a la imagen)
+# ---------------------------
+target/
+.idea/
+*.iml

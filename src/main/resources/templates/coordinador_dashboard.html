@@ -1,0 +1,1174 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard Coordinador - AsistControl</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4F7BFF;
+            --primary-dark: #3A5FDB;
+            --primary-light: #EAF0FF;
+            --secondary: #8B5CF6;
+            --accent: #10B981;
+            --accent-dark: #059669;
+            --light-bg: #FFFFFF;
+            --dark-bg: #0F172A;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --card-shadow: 0 20px 40px -15px rgba(79, 123, 255, 0.15);
+            --card-shadow-hover: 0 30px 60px -20px rgba(79, 123, 255, 0.25);
+            --border-light: #E2E8F0;
+            --gradient-primary: linear-gradient(135deg, var(--primary), var(--secondary));
+            --gradient-dark: linear-gradient(135deg, var(--dark-bg), #1E293B);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(45deg, #f8fafc 0%, #f1f5f9 100%);
+            color: var(--text-dark);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .background-animation { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; }
+
+        .floating-shapes { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; }
+
+        .shape {
+            position: absolute; opacity: 0.1; border-radius: 50%;
+            background: var(--gradient-primary); animation: float 20s infinite linear;
+        }
+        .shape:nth-child(1) { width: 300px; height: 300px; top: 10%; left: 5%; animation-delay: 0s; }
+        .shape:nth-child(2) { width: 200px; height: 200px; top: 60%; right: 10%; animation-delay: -5s; animation-duration: 25s; }
+        .shape:nth-child(3) { width: 150px; height: 150px; bottom: 20%; left: 20%; animation-delay: -10s; animation-duration: 30s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-30px) rotate(120deg); }
+            66% { transform: translateY(30px) rotate(240deg); }
+        }
+
+        .dashboard-container { display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 280px; background: var(--gradient-dark); color: white;
+            position: fixed; height: 100vh; overflow-y: auto;
+            transition: all 0.3s ease; z-index: 1000;
+        }
+
+        .sidebar-header { padding: 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; }
+
+        .brand-container { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 1rem; }
+
+        .brand-logo {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .brand-logo img { width: 25px; height: 25px; border-radius: 6px; }
+
+        .brand-text {
+            font-weight: 800; font-size: 1.3rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .user-info { text-align: center; }
+        .user-name { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.25rem; }
+        .user-role {
+            font-size: 0.9rem; opacity: 0.8;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 500;
+        }
+
+        .sidebar-nav { padding: 1.5rem; }
+        .nav-item { margin-bottom: 0.5rem; }
+
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 1rem 1.25rem; color: rgba(255,255,255,0.8);
+            text-decoration: none; border-radius: 12px;
+            transition: all 0.3s ease; font-weight: 500;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1); color: white; transform: translateX(5px);
+        }
+
+        .nav-link i { font-size: 1.2rem; width: 20px; text-align: center; }
+
+        .main-content { flex: 1; margin-left: 280px; padding: 2rem; animation: fadeIn 0.5s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Secciones del dashboard */
+        .section-view { display: none; }
+        .section-view.active { display: block; }
+
+        .page-header { margin-bottom: 2rem; }
+
+        .page-title {
+            font-weight: 800; font-size: 2.5rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle { color: var(--text-muted); font-size: 1.1rem; }
+
+        .dashboard-card {
+            background: white; border-radius: 20px; padding: 2rem;
+            box-shadow: var(--card-shadow); border: 1px solid var(--border-light);
+            transition: all 0.3s ease; margin-bottom: 1.5rem;
+        }
+
+        .dashboard-card:hover { transform: translateY(-5px); box-shadow: var(--card-shadow-hover); }
+
+        .card-header-custom {
+            display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+        }
+
+        .card-title { font-weight: 700; font-size: 1.3rem; color: var(--text-dark); margin: 0; }
+
+        .card-icon {
+            width: 50px; height: 50px; border-radius: 12px;
+            background: var(--primary-light); display: flex;
+            align-items: center; justify-content: center;
+            color: var(--primary); font-size: 1.5rem; flex-shrink: 0;
+        }
+
+        .table-container { background: white; border-radius: 15px; overflow: hidden; box-shadow: var(--card-shadow); }
+        .table-header { background: var(--gradient-primary); color: white; padding: 1.5rem; }
+        .table-header h3 { margin: 0; font-weight: 700; font-size: 1.2rem; }
+
+        .modern-table { width: 100%; border-collapse: collapse; }
+        .modern-table th {
+            background: #F8FAFC; padding: 1rem 1.5rem;
+            text-align: left; font-weight: 600; color: var(--text-dark);
+            border-bottom: 2px solid var(--border-light);
+        }
+        .modern-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+        .modern-table tr:last-child td { border-bottom: none; }
+        .modern-table tr:hover { background: #F8FAFC; }
+
+        .status-badge { padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .status-enabled { background: #D1FAE5; color: #065F46; }
+        .status-disabled { background: #FEE2E2; color: #991B1B; }
+
+        .btn-modern {
+            background: var(--gradient-primary); color: white; border: none;
+            border-radius: 12px; padding: 0.75rem 1.5rem; font-weight: 600;
+            transition: all 0.3s ease; box-shadow: 0 8px 25px rgba(79,123,255,0.3);
+            display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer;
+        }
+
+        .btn-modern:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(79,123,255,0.4); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #EF4444, #DC2626); box-shadow: 0 8px 25px rgba(239,68,68,0.3); }
+        .btn-danger:hover { box-shadow: 0 12px 35px rgba(239,68,68,0.4); }
+
+        .actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+
+        .action-card {
+            background: white; border-radius: 20px; padding: 2rem;
+            text-align: center; box-shadow: var(--card-shadow);
+            transition: all 0.3s ease; border: 1px solid var(--border-light);
+        }
+
+        .action-card:hover { transform: translateY(-8px); box-shadow: var(--card-shadow-hover); }
+
+        .action-icon {
+            width: 70px; height: 70px; border-radius: 20px;
+            background: var(--primary-light); display: flex; align-items: center;
+            justify-content: center; margin: 0 auto 1.5rem;
+            color: var(--primary); font-size: 2rem; transition: all 0.3s ease;
+        }
+
+        .action-card:hover .action-icon { background: var(--gradient-primary); color: white; transform: scale(1.1); }
+        .action-title { font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem; color: var(--text-dark); }
+
+        /* ==========================================
+           ESTILOS SECCIÓN IO
+           ========================================== */
+
+        .io-hero {
+            background: var(--gradient-primary);
+            border-radius: 20px;
+            padding: 2.5rem;
+            color: white;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .io-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+
+        .io-hero h2 { font-weight: 800; font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .io-hero p { opacity: 0.85; font-size: 1rem; margin: 0; }
+
+        .io-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.2); border-radius: 20px;
+            padding: 0.35rem 1rem; font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 1rem; backdrop-filter: blur(10px);
+        }
+
+        .model-block {
+            background: #F8FAFC;
+            border-radius: 16px;
+            padding: 1.75rem;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .model-block h5 {
+            font-weight: 700; color: var(--primary);
+            font-size: 0.9rem; text-transform: uppercase;
+            letter-spacing: 0.05em; margin-bottom: 1rem;
+        }
+
+        .math-formula {
+            font-family: 'Courier New', monospace;
+            background: white;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .math-formula.objective {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary-dark);
+            font-size: 1.15rem;
+            text-align: center;
+        }
+
+        .restriccion-item {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 0.75rem 0; border-bottom: 1px dashed var(--border-light);
+        }
+
+        .restriccion-item:last-child { border-bottom: none; }
+
+        .restriccion-label {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 8px;
+            padding: 0.3rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Resultado óptimo */
+        .resultado-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .resultado-card {
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border-light);
+        }
+
+        .resultado-card.x1 { background: #EFF6FF; border-color: #BFDBFE; }
+        .resultado-card.x2 { background: #F0FDF4; border-color: #BBF7D0; }
+        .resultado-card.z  { background: var(--primary-light); border-color: #C7D7FF; }
+
+        .resultado-valor { font-size: 2.5rem; font-weight: 800; line-height: 1; margin-bottom: 0.5rem; }
+        .resultado-card.x1 .resultado-valor { color: #2563EB; }
+        .resultado-card.x2 .resultado-valor { color: #16A34A; }
+        .resultado-card.z  .resultado-valor { color: var(--primary); }
+        .resultado-label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+
+        /* Simulador */
+        .simulador-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .simulador-header {
+            display: flex; align-items: center; gap: 1rem; margin-bottom: 1.75rem;
+        }
+
+        .simulador-icon {
+            width: 50px; height: 50px; border-radius: 12px;
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.4rem;
+        }
+
+        .param-group { margin-bottom: 1.25rem; }
+
+        .param-label {
+            display: flex; justify-content: space-between;
+            font-weight: 600; font-size: 0.9rem; color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .param-value {
+            background: var(--primary-light); color: var(--primary);
+            font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 8px;
+        }
+
+        .param-range {
+            width: 100%; height: 6px; border-radius: 3px;
+            -webkit-appearance: none; appearance: none;
+            background: var(--border-light); outline: none; cursor: pointer;
+        }
+
+        .param-range::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 20px; height: 20px;
+            border-radius: 50%; background: var(--primary);
+            cursor: pointer; box-shadow: 0 2px 8px rgba(79,123,255,0.4);
+        }
+
+        .sim-resultado {
+            background: var(--gradient-primary);
+            border-radius: 16px; padding: 1.5rem;
+            color: white; text-align: center; margin-top: 1.5rem;
+        }
+
+        .sim-resultado-titulo { font-size: 0.85rem; opacity: 0.85; margin-bottom: 0.5rem; }
+        .sim-resultado-valor { font-size: 2rem; font-weight: 800; }
+        .sim-resultado-detalle { font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem; }
+
+        .sim-infeasible {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+        }
+
+        /* Conclusión */
+        .conclusion-card {
+            background: white; border-radius: 20px;
+            padding: 2rem; box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-light);
+        }
+
+        .conclusion-header {
+            display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+        }
+
+        .conclusion-icon {
+            width: 50px; height: 50px; border-radius: 12px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.4rem;
+        }
+
+        .conclusion-text {
+            color: var(--text-muted); line-height: 1.8; font-size: 0.95rem;
+        }
+
+        .insight-item {
+            display: flex; align-items: flex-start; gap: 1rem;
+            padding: 1rem; border-radius: 12px;
+            background: #F8FAFC; margin-bottom: 0.75rem;
+        }
+
+        .insight-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: var(--primary-light); color: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; flex-shrink: 0;
+        }
+
+        .insight-text { font-size: 0.9rem; color: var(--text-dark); line-height: 1.6; }
+        .insight-text strong { color: var(--primary-dark); }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 1rem; }
+            .actions-grid { grid-template-columns: 1fr; }
+            .resultado-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<!-- Fondo Animado -->
+<div class="background-animation"></div>
+<div class="floating-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+</div>
+
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-container">
+                <div class="brand-logo">
+                    <img src="static/imagenes/logoappM.jpg" alt="AsistControl"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjUiIGhlaWdodD0iMjUiIHZpZXdCb3g9IjAgMCAyNSAyNSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI1IiBoZWlnaHQ9IjI1IiByeD0iNiIgZmlsbD0id2hpdGUiLz4KPHRleHQgeD0iMTIuNSIgeT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMCIgZmlsbD0iIzRGN0JGRiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QUM8L3RleHQ+Cjwvc3ZnPgo='">
+                </div>
+                <div class="brand-text">AsistControl</div>
+            </div>
+            <div class="user-info">
+                <div class="user-name">Coordinador</div>
+                <div class="user-role">Administrador del Sistema</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <a href="#" class="nav-link active" data-section="control">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Control de Acceso</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="/registro" class="nav-link">
+                    <i class="bi bi-person-plus"></i>
+                    <span>Registrar Usuario</span>
+                </a>
+            </div>
+            <!-- NUEVO: Enlace a sección IO -->
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-section="io">
+                    <i class="bi bi-calculator"></i>
+                    <span>Optimización IO</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="/asistencia/form" class="nav-link">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Predicción de Asistencia</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="/coordinador/riesgo" class="nav-link">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <span>Riesgo de Inasistencia</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="/" class="nav-link" id="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="main-content">
+
+        <!-- ========================
+             SECCIÓN: Control de Acceso (original)
+             ======================== -->
+        <div class="section-view active" id="section-control">
+            <div class="page-header">
+                <h1 class="page-title">Panel de Control</h1>
+                <p class="page-subtitle">Gestiona el acceso y configuración del sistema</p>
+            </div>
+
+            <div class="dashboard-card">
+                <div class="card-header-custom">
+                    <div class="card-icon"><i class="bi bi-shield-check"></i></div>
+                    <h2 class="card-title">Control de Acceso por Rol</h2>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header"><h3>Gestión de Permisos</h3></div>
+                    <table class="modern-table">
+                        <thead>
+                        <tr>
+                            <th>Rol</th>
+                            <th>Descripción</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-mortarboard me-3 text-primary"></i>
+                                    <strong>Estudiante</strong>
+                                </div>
+                            </td>
+                            <td>Acceso para estudiantes del sistema</td>
+                            <td>
+                                <span id="estado-estudiante" class="status-badge">
+                                    <i class="bi bi-circle-fill"></i> Cargando...
+                                </span>
+                            </td>
+                            <td>
+                                <button data-toggle-role="estudiante" class="btn-modern btn-sm">
+                                    <i class="bi bi-arrow-repeat"></i> Cambiar Estado
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person-badge me-3 text-primary"></i>
+                                    <strong>Profesor</strong>
+                                </div>
+                            </td>
+                            <td>Acceso para docentes del sistema</td>
+                            <td>
+                                <span id="estado-profesor" class="status-badge">
+                                    <i class="bi bi-circle-fill"></i> Cargando...
+                                </span>
+                            </td>
+                            <td>
+                                <button data-toggle-role="profesor" class="btn-modern btn-sm">
+                                    <i class="bi bi-arrow-repeat"></i> Cambiar Estado
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="actions-grid">
+                <div class="action-card">
+                    <div class="action-icon"><i class="bi bi-person-plus"></i></div>
+                    <h3 class="action-title">Registrar Usuario</h3>
+                    <p class="text-muted mb-3">Agregar nuevos usuarios al sistema</p>
+                    <a href="/registro" class="btn-modern">
+                        <i class="bi bi-plus-circle"></i> Ir al Registro
+                    </a>
+                </div>
+
+                <!-- Card para ir a IO -->
+                <div class="action-card" style="cursor:pointer;" onclick="navegarSeccion('io')">
+                    <div class="action-icon" style="background: linear-gradient(135deg,#F59E0B,#D97706); color:white;">
+                        <i class="bi bi-bar-chart-steps"></i>
+                    </div>
+                    <h3 class="action-title">Optimización IO</h3>
+                    <p class="text-muted mb-3">Modelo de programación lineal del sistema</p>
+                    <button class="btn-modern" style="background: linear-gradient(135deg,#F59E0B,#D97706);">
+                        <i class="bi bi-eye"></i> Ver Modelo
+                    </button>
+                </div>
+
+                <div class="action-card">
+                    <div class="action-icon"><i class="bi bi-box-arrow-right"></i></div>
+                    <h3 class="action-title">Cerrar Sesión</h3>
+                    <p class="text-muted mb-3">Salir de forma segura del sistema</p>
+                    <button id="btn-logout-action" class="btn-modern btn-danger">
+                        <i class="bi bi-power"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================
+             SECCIÓN: Optimización IO (NUEVA)
+             ======================== -->
+        <div class="section-view" id="section-io">
+
+            <!-- Hero -->
+            <div class="io-hero">
+                <div class="io-badge">
+                    <i class="bi bi-mortarboard-fill"></i>
+                    Investigación de Operaciones
+                </div>
+                <h2>Optimización del Sistema Aula</h2>
+                <p>Modelo de Programación Lineal — Maximización de Eficiencia Operativa</p>
+            </div>
+
+            <div class="row g-4">
+
+                <!-- COLUMNA IZQUIERDA: Modelo matemático -->
+                <div class="col-lg-6">
+                    <div class="dashboard-card" style="height: fit-content;">
+                        <div class="card-header-custom">
+                            <div class="card-icon"><i class="bi bi-journal-code"></i></div>
+                            <div>
+                                <h2 class="card-title">Modelo Matemático</h2>
+                                <p class="text-muted mb-0" style="font-size:0.85rem;">Formulación completa del problema</p>
+                            </div>
+                        </div>
+
+                        <!-- Variables de decisión -->
+                        <div class="model-block">
+                            <h5><i class="bi bi-x-diamond me-2"></i>Variables de Decisión</h5>
+                            <div class="math-formula">X₁ = Clases gestionadas / día</div>
+                            <div class="math-formula">X₂ = Asistencias procesadas / día</div>
+                        </div>
+
+                        <!-- Función objetivo -->
+                        <div class="model-block">
+                            <h5><i class="bi bi-bullseye me-2"></i>Función Objetivo</h5>
+                            <div class="math-formula objective">Max Z = 10·X₁ + 6·X₂</div>
+                            <p class="text-muted mt-2 mb-0" style="font-size:0.85rem;">
+                                Cada clase aporta 10 puntos de eficiencia y cada asistencia 6 puntos.
+                            </p>
+                        </div>
+
+                        <!-- Restricciones -->
+                        <div class="model-block">
+                            <h5><i class="bi bi-sliders me-2"></i>Restricciones</h5>
+                            <div class="restriccion-item">
+                                <span class="restriccion-label">Tiempo</span>
+                                <div class="math-formula mb-0" style="flex:1; padding: 0.5rem 1rem;">3X₁ + X₂ ≤ 300 min</div>
+                            </div>
+                            <div class="restriccion-item">
+                                <span class="restriccion-label">Procesam.</span>
+                                <div class="math-formula mb-0" style="flex:1; padding: 0.5rem 1rem;">2X₁ + X₂ ≤ 400 ops</div>
+                            </div>
+                            <div class="restriccion-item">
+                                <span class="restriccion-label">QR</span>
+                                <div class="math-formula mb-0" style="flex:1; padding: 0.5rem 1rem;">X₁ + X₂ ≤ 350 códigos</div>
+                            </div>
+                            <div class="restriccion-item">
+                                <span class="restriccion-label">No neg.</span>
+                                <div class="math-formula mb-0" style="flex:1; padding: 0.5rem 1rem;">X₁ ≥ 0 ; X₂ ≥ 0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMNA DERECHA: Gráfica -->
+                <div class="col-lg-6">
+                    <div class="dashboard-card">
+                        <div class="card-header-custom">
+                            <div class="card-icon" style="background:#F0FDF4; color:#16A34A;">
+                                <i class="bi bi-graph-up"></i>
+                            </div>
+                            <div>
+                                <h2 class="card-title">Región Factible</h2>
+                                <p class="text-muted mb-0" style="font-size:0.85rem;">Espacio de soluciones posibles</p>
+                            </div>
+                        </div>
+                        <canvas id="regionFactibleChart" style="max-height: 360px;"></canvas>
+                        <div class="mt-3 d-flex flex-wrap gap-2">
+                            <span style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
+                                <span style="width:12px;height:12px;background:#4F7BFF;border-radius:3px;display:inline-block;"></span> Tiempo
+                            </span>
+                            <span style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
+                                <span style="width:12px;height:12px;background:#8B5CF6;border-radius:3px;display:inline-block;"></span> Procesamiento
+                            </span>
+                            <span style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
+                                <span style="width:12px;height:12px;background:#F59E0B;border-radius:3px;display:inline-block;"></span> QR
+                            </span>
+                            <span style="font-size:0.8rem; display:flex; align-items:center; gap:5px;">
+                                <span style="width:12px;height:12px;background:#EF4444;border-radius:50%;display:inline-block;"></span> Óptimo (0, 300)
+                            </span>
+                        </div>
+
+                        <!-- Documentos del trabajo -->
+                        <div style="margin-top:1.5rem; border-top: 1px solid var(--border-light); padding-top:1.5rem;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:1rem;">
+                                <i class="bi bi-folder2-open" style="color:var(--primary); font-size:1.1rem;"></i>
+                                <span style="font-weight:700; font-size:0.95rem; color:var(--text-dark);">Documentos del Proyecto IO</span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:0.75rem;">
+
+                                <!-- Botón Word -->
+                                <a href="/imagenes/investigacion.docx" download
+                                   style="display:flex; align-items:center; gap:1rem; padding:0.9rem 1.2rem;
+                                          background:#EFF6FF; border:1px solid #BFDBFE; border-radius:14px;
+                                          text-decoration:none; transition:all 0.25s ease;"
+                                   onmouseover="this.style.background='#DBEAFE'; this.style.transform='translateY(-2px)'"
+                                   onmouseout="this.style.background='#EFF6FF'; this.style.transform='translateY(0)'">
+                                    <div style="width:40px; height:40px; border-radius:10px;
+                                                background:linear-gradient(135deg,#2563EB,#1D4ED8);
+                                                display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i class="bi bi-file-earmark-word-fill" style="color:white; font-size:1.1rem;"></i>
+                                    </div>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="font-weight:700; font-size:0.88rem; color:#1E3A5F;">Investigación de Operaciones</div>
+                                        <div style="font-size:0.78rem; color:#64748B;">Modelado y formulación del problema · .docx</div>
+                                    </div>
+                                    <i class="bi bi-download" style="color:#2563EB; font-size:1rem; flex-shrink:0;"></i>
+                                </a>
+
+                                <!-- Botón Excel -->
+                                <a href="/imagenes/solveraula.xlsx" download
+                                   style="display:flex; align-items:center; gap:1rem; padding:0.9rem 1.2rem;
+                                          background:#F0FDF4; border:1px solid #BBF7D0; border-radius:14px;
+                                          text-decoration:none; transition:all 0.25s ease;"
+                                   onmouseover="this.style.background='#DCFCE7'; this.style.transform='translateY(-2px)'"
+                                   onmouseout="this.style.background='#F0FDF4'; this.style.transform='translateY(0)'">
+                                    <div style="width:40px; height:40px; border-radius:10px;
+                                                background:linear-gradient(135deg,#16A34A,#15803D);
+                                                display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i class="bi bi-file-earmark-excel-fill" style="color:white; font-size:1.1rem;"></i>
+                                    </div>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="font-weight:700; font-size:0.88rem; color:#14532D;">Solver — Optimización Aula</div>
+                                        <div style="font-size:0.78rem; color:#64748B;">Solución óptima con Simplex LP · .xlsx</div>
+                                    </div>
+                                    <i class="bi bi-download" style="color:#16A34A; font-size:1rem; flex-shrink:0;"></i>
+                                </a>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resultado Óptimo -->
+            <div class="dashboard-card">
+                <div class="card-header-custom">
+                    <div class="card-icon" style="background:#FEF3C7; color:#D97706;">
+                        <i class="bi bi-trophy"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Solución Óptima — Solver</h2>
+                        <p class="text-muted mb-0" style="font-size:0.85rem;">Resultado obtenido con Simplex LP en Excel</p>
+                    </div>
+                </div>
+
+                <div class="resultado-grid">
+                    <div class="resultado-card x1">
+                        <div class="resultado-valor">0</div>
+                        <div class="resultado-label">X₁ — Clases / día</div>
+                    </div>
+                    <div class="resultado-card x2">
+                        <div class="resultado-valor">300</div>
+                        <div class="resultado-label">X₂ — Asistencias / día</div>
+                    </div>
+                    <div class="resultado-card z">
+                        <div class="resultado-valor">1800</div>
+                        <div class="resultado-label">Z — Puntos de eficiencia</div>
+                    </div>
+                </div>
+
+                <!-- Verificación de restricciones -->
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div style="background:#EFF6FF; border-radius:12px; padding:1rem; text-align:center;">
+                            <div style="font-size:0.8rem; color:#64748B; margin-bottom:4px;">Tiempo utilizado</div>
+                            <div style="font-weight:700; color:#2563EB; font-size:1.1rem;">300 / 300 min</div>
+                            <div style="font-size:0.75rem; color:#16A34A; font-weight:600;">✓ Vinculante (al límite)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="background:#F0FDF4; border-radius:12px; padding:1rem; text-align:center;">
+                            <div style="font-size:0.8rem; color:#64748B; margin-bottom:4px;">Procesamiento</div>
+                            <div style="font-weight:700; color:#16A34A; font-size:1.1rem;">300 / 400 ops</div>
+                            <div style="font-size:0.75rem; color:#64748B; font-weight:600;">Holgura: 100 ops</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="background:#FFFBEB; border-radius:12px; padding:1rem; text-align:center;">
+                            <div style="font-size:0.8rem; color:#64748B; margin-bottom:4px;">Códigos QR</div>
+                            <div style="font-weight:700; color:#D97706; font-size:1.1rem;">300 / 350 códigos</div>
+                            <div style="font-size:0.75rem; color:#64748B; font-weight:600;">Holgura: 50 códigos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulador Interactivo -->
+            <div class="simulador-card">
+                <div class="simulador-header">
+                    <div class="simulador-icon"><i class="bi bi-sliders2"></i></div>
+                    <div>
+                        <h2 class="card-title">Simulador de Parámetros</h2>
+                        <p class="text-muted mb-0" style="font-size:0.85rem;">
+                            Cambia las restricciones y observa cómo cambia la solución óptima en tiempo real
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="param-group">
+                            <div class="param-label">
+                                <span><i class="bi bi-clock me-1"></i> Tiempo disponible</span>
+                                <span class="param-value" id="val-tiempo">300</span>
+                            </div>
+                            <input type="range" class="param-range" id="slider-tiempo"
+                                   min="100" max="600" step="10" value="300">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-top:4px;">
+                                <span>100 min</span><span>600 min</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="param-group">
+                            <div class="param-label">
+                                <span><i class="bi bi-cpu me-1"></i> Cap. procesamiento</span>
+                                <span class="param-value" id="val-proc">400</span>
+                            </div>
+                            <input type="range" class="param-range" id="slider-proc"
+                                   min="100" max="800" step="10" value="400">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-top:4px;">
+                                <span>100 ops</span><span>800 ops</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="param-group">
+                            <div class="param-label">
+                                <span><i class="bi bi-qr-code me-1"></i> Códigos QR</span>
+                                <span class="param-value" id="val-qr">350</span>
+                            </div>
+                            <input type="range" class="param-range" id="slider-qr"
+                                   min="100" max="700" step="10" value="350">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#94a3b8; margin-top:4px;">
+                                <span>100 QR</span><span>700 QR</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sim-resultado" class="sim-resultado">
+                    <div class="sim-resultado-titulo">Solución óptima simulada</div>
+                    <div class="sim-resultado-valor" id="sim-z">Z = 1800</div>
+                    <div class="sim-resultado-detalle" id="sim-xy">X₁ = 0 clases · X₂ = 300 asistencias</div>
+                </div>
+            </div>
+
+            <!-- Conclusión -->
+            <div class="conclusion-card">
+                <div class="conclusion-header">
+                    <div class="conclusion-icon"><i class="bi bi-lightbulb-fill"></i></div>
+                    <div>
+                        <h2 class="card-title">Conclusión</h2>
+                        <p class="text-muted mb-0" style="font-size:0.85rem;">Interpretación y reflexión del modelo</p>
+                    </div>
+                </div>
+
+                <p class="conclusion-text mb-4">
+                    Al resolver el modelo mediante el método <strong>Simplex LP</strong> en Excel Solver, se encontró que la solución
+                    óptima es procesar <strong>300 registros de asistencia al día (X₂ = 300)</strong> y dejar en cero la
+                    gestión de clases independiente (X₁ = 0), alcanzando una eficiencia de <strong>Z = 1800 puntos</strong>.
+                </p>
+
+                <div class="insight-item">
+                    <div class="insight-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="insight-text">
+                        <strong>La restricción de tiempo es la limitante clave.</strong> Con 300 minutos disponibles y cada
+                        asistencia consumiendo 1 minuto, el sistema puede procesar exactamente 300 registros antes de agotar
+                        su tiempo operativo diario. Esta restricción es <em>vinculante</em> (no tiene holgura).
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon"><i class="bi bi-arrow-left-right"></i></div>
+                    <div class="insight-text">
+                        <strong>Gestionar clases no es rentable bajo estas condiciones.</strong> Una clase consume 3 minutos
+                        y aporta 10 puntos. Una asistencia consume 1 minuto y aporta 6 puntos.
+                        La razón eficiencia/tiempo para clases es 3.33, mientras que para asistencias es 6.
+                        El modelo reconoce que <em>maximizar registros de asistencia</em> es la estrategia más eficiente.
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon"><i class="bi bi-gear-fill"></i></div>
+                    <div class="insight-text">
+                        <strong>El sistema Aula está correctamente dimensionado.</strong> Las restricciones de procesamiento
+                        (holgura de 100 ops) y validación QR (holgura de 50) indican que esos recursos <em>no son el cuello
+                        de botella</em>. Si se quisiera mejorar el desempeño, la inversión debe dirigirse a ampliar el
+                        tiempo operativo del servidor.
+                    </div>
+                </div>
+
+                <div class="insight-item">
+                    <div class="insight-icon"><i class="bi bi-translate"></i></div>
+                    <div class="insight-text">
+                        <strong>El modelo valida el diseño del proyecto.</strong> El sistema fue construido para automatizar
+                        el registro de asistencias masivo, y la IO confirma matemáticamente que esa es la función que
+                        maximiza el valor del sistema bajo restricciones reales de infraestructura universitaria.
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- fin section-io -->
+
+    </div><!-- fin main-content -->
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    /* =====================================================
+       NAVEGACIÓN ENTRE SECCIONES
+       ===================================================== */
+    function navegarSeccion(nombre) {
+        document.querySelectorAll('.section-view').forEach(s => s.classList.remove('active'));
+        document.getElementById('section-' + nombre).classList.add('active');
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`[data-section="${nombre}"]`);
+        if (link) link.classList.add('active');
+
+        // Dibuja la gráfica solo cuando se entra a IO (evita error de canvas oculto)
+        if (nombre === 'io') {
+            setTimeout(() => initChart(300, 400, 350), 50);
+        }
+    }
+
+    /* =====================================================
+       GRÁFICA REGIÓN FACTIBLE — Chart.js
+       ===================================================== */
+    let chartInstance = null;
+
+    function getRestriccionPoints(a1, b1, rhs, maxX1 = 400) {
+        // a1*x1 + b1*x2 <= rhs  →  x2 = (rhs - a1*x1) / b1
+        const pts = [];
+        for (let x1 = 0; x1 <= maxX1; x1 += 5) {
+            const x2 = (rhs - a1 * x1) / b1;
+            if (x2 >= 0) pts.push({ x: x1, y: x2 });
+            else { pts.push({ x: rhs / a1, y: 0 }); break; }
+        }
+        return pts;
+    }
+
+    function initChart(limTiempo, limProc, limQR) {
+        const ctx = document.getElementById('regionFactibleChart');
+        if (!ctx) return;
+
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+        const ptsTiempo = getRestriccionPoints(3, 1, limTiempo);
+        const ptsProc   = getRestriccionPoints(2, 1, limProc);
+        const ptsQR     = getRestriccionPoints(1, 1, limQR);
+
+        // Punto óptimo
+        const optimo = resolverSimplexLocal(limTiempo, limProc, limQR);
+
+        chartInstance = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Tiempo (3X₁+X₂≤' + limTiempo + ')',
+                        data: ptsTiempo,
+                        showLine: true, borderColor: '#4F7BFF',
+                        backgroundColor: 'rgba(79,123,255,0.08)',
+                        borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0
+                    },
+                    {
+                        label: 'Procesamiento (2X₁+X₂≤' + limProc + ')',
+                        data: ptsProc,
+                        showLine: true, borderColor: '#8B5CF6',
+                        backgroundColor: 'rgba(139,92,246,0.08)',
+                        borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0
+                    },
+                    {
+                        label: 'QR (X₁+X₂≤' + limQR + ')',
+                        data: ptsQR,
+                        showLine: true, borderColor: '#F59E0B',
+                        backgroundColor: 'rgba(245,158,11,0.08)',
+                        borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0
+                    },
+                    {
+                        label: 'Óptimo (' + optimo.x1 + ', ' + optimo.x2 + ')',
+                        data: [{ x: optimo.x1, y: optimo.x2 }],
+                        backgroundColor: '#EF4444',
+                        borderColor: 'white', borderWidth: 3,
+                        pointRadius: 10, pointHoverRadius: 13
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `(X₁=${ctx.parsed.x}, X₂=${ctx.parsed.y.toFixed(0)})`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'X₁ — Clases / día', font: { weight: '600' } },
+                        min: 0, max: Math.ceil(limTiempo / 3) + 20,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    y: {
+                        title: { display: true, text: 'X₂ — Asistencias / día', font: { weight: '600' } },
+                        min: 0, max: Math.max(limTiempo, limProc, limQR) + 30,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    /* =====================================================
+       SIMPLEX SIMPLIFICADO (vértices de la región factible)
+       Evalúa todos los vértices candidatos y elige el mejor
+       ===================================================== */
+    function resolverSimplexLocal(T, P, Q) {
+        // Genera vértices candidatos intersectando pares de rectas + ejes
+        const candidatos = [
+            { x1: 0, x2: 0 },
+            { x1: 0, x2: Math.min(T, P, Q) },
+            { x1: T / 3, x2: 0 },
+            { x1: P / 2, x2: 0 },
+            { x1: Q, x2: 0 },
+        ];
+
+        // Intersección Tiempo ∩ Procesamiento: 3x+y=T, 2x+y=P → x=T-P, y=T-3(T-P)
+        const ti_pr_x = T - P; const ti_pr_y = T - 3 * ti_pr_x;
+        candidatos.push({ x1: ti_pr_x, x2: ti_pr_y });
+
+        // Intersección Tiempo ∩ QR: 3x+y=T, x+y=Q → 2x=T-Q → x=(T-Q)/2, y=Q-x
+        const ti_qr_x = (T - Q) / 2; const ti_qr_y = Q - ti_qr_x;
+        candidatos.push({ x1: ti_qr_x, x2: ti_qr_y });
+
+        // Intersección Procesamiento ∩ QR: 2x+y=P, x+y=Q → x=P-Q, y=Q-x
+        const pr_qr_x = P - Q; const pr_qr_y = Q - pr_qr_x;
+        candidatos.push({ x1: pr_qr_x, x2: pr_qr_y });
+
+        let mejor = null; let mejorZ = -Infinity;
+        for (const c of candidatos) {
+            if (c.x1 < -0.001 || c.x2 < -0.001) continue;
+            const x1 = Math.max(0, c.x1); const x2 = Math.max(0, c.x2);
+            if (3*x1 + x2 > T + 0.01) continue;
+            if (2*x1 + x2 > P + 0.01) continue;
+            if (x1 + x2 > Q + 0.01) continue;
+            const z = 10*x1 + 6*x2;
+            if (z > mejorZ) { mejorZ = z; mejor = { x1: Math.round(x1), x2: Math.round(x2), z: Math.round(z) }; }
+        }
+        return mejor || { x1: 0, x2: 0, z: 0 };
+    }
+
+    /* =====================================================
+       SIMULADOR — sliders
+       ===================================================== */
+    function actualizarSimulador() {
+        const T = parseInt(document.getElementById('slider-tiempo').value);
+        const P = parseInt(document.getElementById('slider-proc').value);
+        const Q = parseInt(document.getElementById('slider-qr').value);
+
+        document.getElementById('val-tiempo').textContent = T;
+        document.getElementById('val-proc').textContent = P;
+        document.getElementById('val-qr').textContent = Q;
+
+        const res = resolverSimplexLocal(T, P, Q);
+        const divRes = document.getElementById('sim-resultado');
+        document.getElementById('sim-z').textContent = 'Z = ' + res.z;
+        document.getElementById('sim-xy').textContent =
+            'X₁ = ' + res.x1 + ' clases  ·  X₂ = ' + res.x2 + ' asistencias';
+
+        divRes.className = 'sim-resultado' + (res.z === 0 ? ' sim-infeasible' : '');
+
+        // Actualiza la gráfica si está visible
+        if (document.getElementById('section-io').classList.contains('active')) {
+            initChart(T, P, Q);
+        }
+    }
+
+    /* =====================================================
+       LÓGICA ORIGINAL — control de acceso
+       ===================================================== */
+    function obtenerEstadosLogin() {
+        ['estudiante', 'profesor'].forEach(rol => {
+            fetch(`/api/login-config/${rol}/habilitado`)
+                .then(res => res.json())
+                .then(habilitado => {
+                    const el = document.getElementById(`estado-${rol}`);
+                    if (el) {
+                        el.innerText = habilitado ? 'Habilitado' : 'Deshabilitado';
+                        el.className = habilitado ? 'status-badge status-enabled' : 'status-badge status-disabled';
+                    }
+                })
+                .catch(() => {
+                    const el = document.getElementById(`estado-${rol}`);
+                    if (el) el.innerText = 'Error';
+                });
+        });
+    }
+
+    function toggleEstado(rol) {
+        fetch(`/api/login-config/${rol}/toggle`, { method: 'PUT' })
+            .then(res => res.json())
+            .then(data => {
+                const el = document.getElementById(`estado-${rol}`);
+                if (el) {
+                    el.innerText = data.loginHabilitado ? 'Habilitado' : 'Deshabilitado';
+                    el.className = data.loginHabilitado ? 'status-badge status-enabled' : 'status-badge status-disabled';
+                }
+            })
+            .catch(() => alert('No se pudo cambiar el estado de login.'));
+    }
+
+    function cerrarSesion() {
+        localStorage.removeItem('usuario');
+        sessionStorage.clear();
+        window.location.href = '/';
+    }
+
+    /* =====================================================
+       DOMContentLoaded — inicializar todo
+       ===================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // Control de acceso
+        obtenerEstadosLogin();
+
+        document.querySelectorAll('[data-toggle-role]').forEach(btn => {
+            btn.addEventListener('click', () => toggleEstado(btn.getAttribute('data-toggle-role')));
+        });
+
+        [document.getElementById('logout-btn'), document.getElementById('btn-logout-action')].forEach(btn => {
+            if (btn) btn.addEventListener('click', cerrarSesion);
+        });
+
+        // Navegación sidebar
+        document.querySelectorAll('[data-section]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                navegarSeccion(this.getAttribute('data-section'));
+            });
+        });
+
+        // Sliders del simulador
+        ['slider-tiempo', 'slider-proc', 'slider-qr'].forEach(id => {
+            document.getElementById(id).addEventListener('input', actualizarSimulador);
+        });
+    });
+</script>
+</body>
+</html>

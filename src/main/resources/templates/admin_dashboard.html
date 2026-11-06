@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>Dashboard Docente - AsistControl</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Librería QR compatible con el escáner del estudiante -->
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #4F7BFF;
+            --primary-dark: #3A5FDB;
+            --primary-light: #EAF0FF;
+            --secondary: #8B5CF6;
+            --accent: #10B981;
+            --text-dark: #1E293B;
+            --text-muted: #64748B;
+            --border-light: #E2E8F0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #f8fafc;
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(135deg, #0F172A, #1E293B);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        .brand {
+            font-weight: 700;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-info {
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .user-role {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .sidebar-nav {
+            padding: 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.8rem 1rem;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 1.5rem;
+            min-height: 100vh;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 1px solid var(--border-light);
+            padding: 1.25rem;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-dark);
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid var(--border-light);
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-presente { color: #10B981; }
+        .stat-tarde { color: #F59E0B; }
+        .stat-ausente { color: #EF4444; }
+        .stat-total { color: var(--primary); }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            padding: 0.75rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(79, 123, 255, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-dark);
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: #f8fafc;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .table tr:hover {
+            background: #f8fafc;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-presente {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-tarde {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-ausente {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .qr-container {
+            background: white;
+            border: 2px dashed var(--border-light);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-placeholder {
+            color: var(--text-muted);
+        }
+
+        #qrcode {
+            margin: 0 auto;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: none;
+        }
+
+        .alert-success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .alert-error {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand">AsistControl</div>
+            <div class="user-info">
+                <div class="user-name" id="usuarioActual">Docente</div>
+                <div class="user-role">Panel de Enseñanza</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-item">
+                <button class="nav-link active" data-section="manual">
+                    <i class="bi bi-pencil-square"></i>
+                    Registro Manual
+                </button>
+            </div>
+            <div class="nav-item">
+                <button class="nav-link" data-section="lista">
+                    <i class="bi bi-card-checklist"></i>
+                    Lista
+                </button>
+            </div>
+            <div class="nav-item">
+                <button class="nav-link" data-section="qr">
+                    <i class="bi bi-qr-code"></i>
+                    Generar QR
+                </button>
+            </div>
+            <div class="nav-item">
+                <button class="nav-link" data-section="reporte">
+                    <i class="bi bi-bar-chart-line"></i>
+                    Reportes
+                </button>
+            </div>
+            <div class="nav-item mt-4">
+                <button class="nav-link text-danger" id="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Cerrar Sesión
+                </button>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Contenido Principal -->
+    <div class="main-content">
+        <!-- Registro Manual -->
+        <div id="manual" class="section active">
+            <h2 class="mb-4">Registro Manual de Asistencia</h2>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number stat-presente" id="stat-presente">0</div>
+                    <div class="stat-label">Presentes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-tarde" id="stat-tarde">0</div>
+                    <div class="stat-label">Tardes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-ausente" id="stat-ausente">0</div>
+                    <div class="stat-label">Ausentes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-total" id="stat-total">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Registrar Nueva Asistencia</h3>
+                </div>
+                <div class="card-body">
+                    <form id="registro-form" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre del Alumno</label>
+                            <input id="nombre-alumno" type="text" class="form-control" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Clase</label>
+                            <select id="clase-select" class="form-select" required>
+                                <option value="">Seleccionar clase</option>
+                                <option value="matematicas-A">Matemáticas A</option>
+                                <option value="historia-B">Historia B</option>
+                                <option value="quimica-C">Química C</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Estado</label>
+                            <select id="estado-asistencia" class="form-select" required>
+                                <option value="Presente">Presente</option>
+                                <option value="Tarde">Tarde</option>
+                                <option value="Ausente">Ausente</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha</label>
+                            <input type="datetime-local" class="form-control" id="fecha-asistencia" required>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Registrar Asistencia
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Asistencias -->
+        <div id="lista" class="section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Lista de Asistencias</h2>
+                <div class="btn-group">
+                    <button class="btn btn-outline active" data-filter="all">Todos</button>
+                    <button class="btn btn-outline" data-filter="presente">Presentes</button>
+                    <button class="btn btn-outline" data-filter="tarde">Tardes</button>
+                    <button class="btn btn-outline" data-filter="ausente">Ausentes</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Clase</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                            </thead>
+                            <tbody id="asistencias-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="empty-state" class="text-center py-5" style="display: none;">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-3">No hay registros de asistencia</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generar QR (MEJORADO) -->
+        <div id="qr" class="section">
+            <h2 class="mb-4">Generar Código QR</h2>
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Configuración</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Clase</label>
+                                <select id="clase-select-qr" class="form-select">
+                                    <option value="">Seleccionar clase</option>
+                                    <option value="matematicas-A">Matemáticas A</option>
+                                    <option value="historia-B">Historia B</option>
+                                    <option value="quimica-C">Química C</option>
+                                </select>
+                            </div>
+                            <button id="qr-btn" class="btn btn-primary w-100">
+                                <i class="bi bi-qr-code me-2"></i>
+                                Generar QR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Código QR</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="qr-container" class="qr-container">
+                                <div class="qr-placeholder">
+                                    <i class="bi bi-qr-code display-4"></i>
+                                    <p class="mt-2">Selecciona una clase y genera el código</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reportes -->
+        <div id="reporte" class="section">
+            <h2 class="mb-4">Reportes y Estadísticas</h2>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Exportar Reportes</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="text-center p-4 border rounded">
+                                        <i class="bi bi-file-text display-4 text-primary mb-3"></i>
+                                        <h5>Reporte TXT</h5>
+                                        <button id="reporte-txt-btn" class="btn btn-outline mt-2">
+                                            Descargar TXT
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-center p-4 border rounded">
+                                        <i class="bi bi-file-spreadsheet display-4 text-success mb-3"></i>
+                                        <h5>Reporte Excel</h5>
+                                        <button id="reporte-excel-btn" class="btn btn-outline mt-2">
+                                            Descargar Excel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Resumen</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center mb-4">
+                                <div class="h2 text-primary" id="report-total">0</div>
+                                <small class="text-muted">Total Registros</small>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="d-flex justify-content-between">
+                                    <span>Presentes:</span>
+                                    <strong id="report-presente">0</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Tardes:</span>
+                                    <strong id="report-tarde">0</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Ausentes:</span>
+                                    <strong id="report-ausente">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JavaScript MEJORADO -->
+<script>
+    const state = {
+        currentSection: 'manual',
+        asistencias: []
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initApp();
+    });
+
+    function initApp() {
+        setupNavigation();
+        setupEventListeners();
+        loadInitialData();
+        setDefaultDateTime();
+    }
+
+    function setupNavigation() {
+        document.querySelectorAll('[data-section]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = btn.getAttribute('data-section');
+                showSection(section);
+            });
+        });
+
+        document.querySelectorAll('[data-filter]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const filter = btn.getAttribute('data-filter');
+                filterTable(filter);
+                document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    }
+
+    function setupEventListeners() {
+        const registroForm = document.getElementById('registro-form');
+        if (registroForm) {
+            registroForm.addEventListener('submit', handleRegistroSubmit);
+        }
+
+        const qrBtn = document.getElementById('qr-btn');
+        if (qrBtn) {
+            qrBtn.addEventListener('click', generarQR);
+        }
+
+        const reporteTxtBtn = document.getElementById('reporte-txt-btn');
+        if (reporteTxtBtn) {
+            reporteTxtBtn.addEventListener('click', descargarReporteTXT);
+        }
+
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+                    window.location.href = "/";
+                }
+            });
+        }
+    }
+
+    function loadInitialData() {
+        loadUser();
+        loadAsistencias();
+    }
+
+    function setDefaultDateTime() {
+        const fechaInput = document.getElementById('fecha-asistencia');
+        if (fechaInput) {
+            const now = new Date();
+            fechaInput.value = now.toISOString().slice(0, 16);
+        }
+    }
+
+    function showSection(sectionId) {
+        document.querySelectorAll('.section').forEach(section => {
+            section.classList.remove('active');
+        });
+
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.classList.remove('active');
+        });
+
+        const activeLink = document.querySelector(`[data-section="${sectionId}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+
+        if (sectionId === 'lista') {
+            loadAsistencias();
+        } else if (sectionId === 'reporte') {
+            updateReportStats();
+        }
+
+        state.currentSection = sectionId;
+    }
+
+    async function loadUser() {
+        try {
+            const response = await fetch('/api/usuario-actual');
+            if (response.ok) {
+                const userData = await response.json();
+                document.getElementById('usuarioActual').textContent = userData.username || 'Docente';
+            }
+        } catch (error) {
+            console.warn('Error cargando usuario:', error);
+        }
+    }
+
+    async function loadAsistencias() {
+        try {
+            const response = await fetch('/api/asistencias');
+            if (response.ok) {
+                const data = await response.json();
+                state.asistencias = data;
+                renderAsistencias(data);
+                updateStats();
+            }
+        } catch (error) {
+            console.error('Error cargando asistencias:', error);
+            showAlert('Error al cargar las asistencias', 'error');
+        }
+    }
+
+    function renderAsistencias(asistencias) {
+        const tbody = document.getElementById('asistencias-body');
+        const emptyState = document.getElementById('empty-state');
+
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+
+        if (asistencias.length === 0) {
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        if (emptyState) emptyState.style.display = 'none';
+
+        asistencias.forEach(asistencia => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-estado', (asistencia.estado || 'presente').toLowerCase());
+
+            row.innerHTML = `
+                <td>${escapeHtml(asistencia.nombre || '')}</td>
+                <td>${escapeHtml(asistencia.clase || '')}</td>
+                <td>${asistencia.fechaHora ? new Date(asistencia.fechaHora).toLocaleString('es-ES') : ''}</td>
+                <td><span class="badge ${getBadgeClass(asistencia.estado)}">${asistencia.estado || 'Presente'}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteAsistencia(${asistencia.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        });
+    }
+
+    function filterTable(filter) {
+        const rows = document.querySelectorAll('#asistencias-body tr');
+        rows.forEach(row => {
+            if (filter === 'all' || row.getAttribute('data-estado') === filter) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+   async function handleRegistroSubmit(e) {
+    e.preventDefault();
+
+    const nombre = document.getElementById('nombre-alumno').value.trim();
+    const clase = document.getElementById('clase-select').value;
+    const estado = document.getElementById('estado-asistencia').value;
+    const fecha = document.getElementById('fecha-asistencia').value;
+
+    if (!nombre || !clase || !estado) {
+        showAlert('Por favor completa todos los campos', 'error');
+        return;
+    }
+
+    const asistencia = {
+        nombre,
+        clase,
+        estado,
+        fechaHora: new Date(fecha).toISOString()
+    };
+
+    try {
+
+        // ✅ TOKEN CSRF PARA SPRING SECURITY
+        const token = document.querySelector('meta[name="_csrf"]').content;
+        const header = document.querySelector('meta[name="_csrf_header"]').content;
+
+        const response = await fetch('/api/asistencias/manual', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                [header]: token
+            },
+            body: JSON.stringify(asistencia)
+        });
+
+        if (response.ok) {
+            showAlert('Asistencia registrada correctamente', 'success');
+            e.target.reset();
+            setDefaultDateTime();
+            await loadAsistencias();
+        } else {
+
+            let errorMessage = 'Error en el servidor';
+
+            try {
+                const error = await response.json();
+                errorMessage = error.error || errorMessage;
+            } catch (err) {
+                errorMessage = response.statusText;
+            }
+
+            throw new Error(errorMessage);
+        }
+
+    } catch (error) {
+        console.error('Error registrando asistencia:', error);
+        showAlert('Error al registrar la asistencia: ' + error.message, 'error');
+    }
+}
+
+
+    async function deleteAsistencia(id) {
+        if (!confirm('¿Estás seguro de eliminar este registro?')) return;
+
+        try {
+            const response = await fetch(`/api/asistencias/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showAlert('Registro eliminado correctamente', 'success');
+                await loadAsistencias();
+            } else {
+                throw new Error('Error eliminando registro');
+            }
+        } catch (error) {
+            console.error('Error eliminando asistencia:', error);
+            showAlert('Error al eliminar el registro', 'error');
+        }
+    }
+
+    // ✅ FUNCIÓN QR MEJORADA Y COMPATIBLE
+    function generarQR() {
+        const clase = document.getElementById('clase-select-qr').value;
+        const container = document.getElementById('qr-container');
+
+        if (!clase) {
+            showAlert('Por favor selecciona una clase', 'error');
+            return;
+        }
+
+        // Limpiar container
+        container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Generando QR...</p></div>';
+
+        // Datos del QR
+        const qrData = {
+            clase: clase,
+            timestamp: new Date().toISOString(),
+            tipo: 'asistencia'
+        };
+
+        console.log('Generando QR:', qrData);
+
+        // Convertir a string
+        const qrString = JSON.stringify(qrData);
+
+        // Crear contenedor para el QR
+        const qrDiv = document.createElement('div');
+        qrDiv.id = 'qrcode';
+        qrDiv.style.margin = '0 auto';
+        qrDiv.style.padding = '10px';
+        qrDiv.style.background = 'white';
+
+        try {
+            // Eliminar QR anterior si existe
+            if (window.qrcode) {
+                delete window.qrcode;
+            }
+
+            // Generar nuevo QR con la librería compatible
+            new QRCode(qrDiv, {
+                text: qrString,
+                width: 200,
+                height: 200,
+                colorDark: "#1E293B",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            // Mostrar el QR
+            setTimeout(() => {
+                container.innerHTML = '';
+                container.appendChild(qrDiv);
+
+                // Agregar información
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'mt-3';
+                infoDiv.innerHTML = `
+                    <p class="mb-1 fw-bold">${clase}</p>
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-clock me-1"></i>
+                        ${new Date().toLocaleString('es-ES')}
+                    </p>
+                `;
+                container.appendChild(infoDiv);
+
+                showAlert('✅ QR generado correctamente', 'success');
+            }, 100);
+
+        } catch (error) {
+            console.error('Error generando QR:', error);
+            container.innerHTML = `
+                <div class="qr-placeholder">
+                    <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                    <p class="mt-2 text-danger">Error al generar QR</p>
+                </div>
+            `;
+            showAlert('Error al generar el código QR', 'error');
+        }
+    }
+
+    function descargarReporteTXT() {
+        if (state.asistencias.length === 0) {
+            showAlert('No hay registros para generar reporte', 'error');
+            return;
+        }
+
+        let reporte = 'REPORTE DE ASISTENCIAS\n\n';
+        state.asistencias.forEach((asistencia, index) => {
+            reporte += `${index + 1}. ${asistencia.nombre || ''}\n`;
+            reporte += `   Clase: ${asistencia.clase || ''}\n`;
+            reporte += `   Fecha: ${asistencia.fechaHora ? new Date(asistencia.fechaHora).toLocaleString('es-ES') : ''}\n`;
+            reporte += `   Estado: ${asistencia.estado || 'Presente'}\n\n`;
+        });
+
+        const blob = new Blob([reporte], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_asistencias_${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showAlert('Reporte TXT descargado correctamente', 'success');
+    }
+
+    function updateStats() {
+        const stats = { presente: 0, tarde: 0, ausente: 0, total: state.asistencias.length };
+        state.asistencias.forEach(asistencia => {
+            const estado = (asistencia.estado || 'presente').toLowerCase();
+            if (estado === 'presente') stats.presente++;
+            else if (estado === 'tarde') stats.tarde++;
+            else if (estado === 'ausente') stats.ausente++;
+        });
+
+        document.getElementById('stat-presente').textContent = stats.presente;
+        document.getElementById('stat-tarde').textContent = stats.tarde;
+        document.getElementById('stat-ausente').textContent = stats.ausente;
+        document.getElementById('stat-total').textContent = stats.total;
+    }
+
+    function updateReportStats() {
+        updateStats();
+        document.getElementById('report-total').textContent = state.asistencias.length;
+        document.getElementById('report-presente').textContent = state.asistencias.filter(a => (a.estado || '').toLowerCase() === 'presente').length;
+        document.getElementById('report-tarde').textContent = state.asistencias.filter(a => (a.estado || '').toLowerCase() === 'tarde').length;
+        document.getElementById('report-ausente').textContent = state.asistencias.filter(a => (a.estado || '').toLowerCase() === 'ausente').length;
+    }
+
+    function showAlert(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type === 'success' ? 'success' : 'error'}`;
+        alert.innerHTML = `<div class="d-flex align-items-center"><i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>${message}</div>`;
+
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+            mainContent.insertBefore(alert, mainContent.firstChild);
+            setTimeout(() => alert.remove(), 4000);
+        }
+    }
+
+    function getBadgeClass(estado) {
+        const estadoLower = (estado || 'presente').toLowerCase();
+        if (estadoLower === 'presente') return 'badge-presente';
+        if (estadoLower === 'tarde') return 'badge-tarde';
+        if (estadoLower === 'ausente') return 'badge-ausente';
+        return 'badge-presente';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+</script>
+</body>
+</html>
