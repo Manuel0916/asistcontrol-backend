@@ -38,9 +38,6 @@ public class asistenciaController {
     @Autowired
     private SesionClaseService sesionClaseService;
 
-    @Autowired
-    private com.universidad.control_asistencia.service.HistorialMongoService historialMongo;
-
     private static Double numero(Object o) {
         return o instanceof Number n ? n.doubleValue() : null;
     }
@@ -320,7 +317,6 @@ public class asistenciaController {
             return ResponseEntity.status(404).body(Map.of("error", "Asistencia no encontrada"));
         }
         asistenciaRepository.deleteById(id);
-        historialMongo.eliminar(id); // también del historial de la IA
         return ResponseEntity.ok(Map.of("mensaje", "Asistencia eliminada"));
     }
 

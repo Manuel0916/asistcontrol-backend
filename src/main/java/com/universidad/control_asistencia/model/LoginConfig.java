@@ -1,19 +1,21 @@
 package com.universidad.control_asistencia.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-@Entity
-@Table(name = "login_config")
-public class LoginConfig {
+/** Si el login está habilitado para un rol ("estudiante", "profesor"). Colección "login_config". */
+@Document(collection = "login_config")
+public class LoginConfig implements ConIdNumerico {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "rol", unique = true, nullable = false)
+    @Indexed(unique = true)
     private String rol; // Ej: "estudiante" o "profesor"
 
-    @Column(name = "login_habilitado")
+    @Field("login_habilitado")
     private boolean loginHabilitado;
 
     public LoginConfig() {
@@ -26,6 +28,10 @@ public class LoginConfig {
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getRol() {

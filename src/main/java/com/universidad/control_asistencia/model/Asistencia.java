@@ -1,28 +1,40 @@
 package com.universidad.control_asistencia.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "asistencias")
-public class Asistencia {
+/**
+ * Registro de asistencia (colección "asistencias" de MongoDB).
+ * Es la misma colección que lee el servicio de IA para entrenar el modelo:
+ * historial + todo lo que se registra desde la app y la web.
+ */
+@Document(collection = "asistencias")
+public class Asistencia implements ConIdNumerico {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Field("usuario_id")
     private Long usuarioId;
 
+    @Indexed
     private String nombre;
 
+    @Indexed
     private String clase;
 
     private String estado;
 
+    // Mismo nombre de campo que el historial ("fechahora")
+    @Field("fechahora")
+    @Indexed
     private LocalDateTime fechaHora = LocalDateTime.now();
 
     // Getters y setters
-
     public Long getId() {
         return id;
     }

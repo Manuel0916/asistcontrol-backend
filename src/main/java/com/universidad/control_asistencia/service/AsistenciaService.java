@@ -16,18 +16,12 @@ public class AsistenciaService implements AsistenciaInterface {
     @Autowired
     private AsistenciaRepository asistenciaRepository;
 
-    // Copia cada asistencia nueva a MongoDB (historial del modelo de IA)
-    @Autowired
-    private HistorialMongoService historialMongo;
-
     @Override
     public Asistencia registrarAsistencia(Asistencia asistencia) {
         if (asistencia.getFechaHora() == null) {
             asistencia.setFechaHora(LocalDateTime.now());
         }
-        Asistencia guardada = asistenciaRepository.save(asistencia);
-        historialMongo.copiar(guardada);
-        return guardada;
+        return asistenciaRepository.save(asistencia);
     }
 
     @Override

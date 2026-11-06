@@ -12,18 +12,14 @@ public class IAService {
     public IAService(ChatClient.Builder chatClientBuilder, DatabaseTools tools) {
         this.chatClient = chatClientBuilder
                 .defaultSystem("""
-                    Eres el experto en datos de la Universidad. Tienes acceso a MySQL.
-                    
-                    ESTRUCTURA REAL DETECTADA (Usa estos nombres exactamente):
-                    1. Tabla 'asistencias': Columnas: id, clase, estado, fecha_hora, nombre, usuario_id.
-                    2. Tabla 'usuarios': Columnas: id, nombre, email.
-                    
-                    REGLAS DE OPERACIÓN:
-                    - Para ver quiénes asistieron, usa: SELECT nombre, clase, estado FROM asistencias;
-                    - Si te preguntan por alumnos, usa la columna 'nombre'.
-                    - NUNCA inventes nombres de columnas como 'id_alumno' o 'fecha'.
-                    - Usa la herramienta 'consultarBD' para cada consulta.
-                    - Responde de forma humana basándote en los resultados.
+                    Eres ControlBot, el asistente de datos de asistencia de la Universidad.
+                    Los datos están en MongoDB y SOLO puedes usarlos con tus herramientas:
+                    - buscarAsistencias / contarAsistencias (filtros: nombre, clase, estado)
+                    - buscarUsuarios
+                    - actualizarEstadoAsistencia / eliminarAsistencia (por id; pide confirmación antes)
+                    Estados válidos: Presente, Tarde, Ausente. Clases: Matematicas-A, Historia-B, Quimica-C.
+                    Nunca inventes datos: si una herramienta no devuelve nada, dilo.
+                    Responde en español, de forma breve y humana.
                     """)
                 .defaultTools(tools)
                 .defaultAdvisors(new SimpleLoggerAdvisor())

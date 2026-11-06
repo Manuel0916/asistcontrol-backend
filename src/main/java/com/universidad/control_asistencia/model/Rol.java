@@ -1,22 +1,18 @@
 package com.universidad.control_asistencia.model;
 
-import jakarta.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-@Entity
-@Table(name = "roles")
-public class Rol {
+import java.util.Objects;
+
+/** Rol (ROLE_ADMIN, ROLE_COORDINADOR, ROLE_ESTUDIANTE...). Colección "roles". */
+@Document(collection = "roles")
+public class Rol implements ConIdNumerico {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 20)
     private String nombre;
-
-    @ManyToMany(mappedBy = "roles")
-    private Set<Usuario> usuarios = new HashSet<>();
 
     // Constructor vacío
     public Rol() {}
@@ -33,6 +29,14 @@ public class Rol {
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 
-    public Set<Usuario> getUsuarios() { return usuarios; }
-    public void setUsuarios(Set<Usuario> usuarios) { this.usuarios = usuarios; }
+    // Dos roles son iguales si tienen el mismo nombre (evita repetidos en el Set del usuario)
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Rol r && Objects.equals(nombre, r.nombre);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(nombre);
+    }
 }

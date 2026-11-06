@@ -1,32 +1,31 @@
 package com.universidad.control_asistencia.model;
 
-import jakarta.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.util.HashSet;
 import java.util.Set;
 
-@Entity
-@Table(name = "usuarios")
-public class Usuario {
+/**
+ * Usuario del sistema (colección "usuarios" de MongoDB).
+ * Los roles se guardan DENTRO del usuario (documento embebido), así no hace falta
+ * la tabla intermedia usuario_roles que usaba MySQL.
+ */
+@Document(collection = "usuarios")
+public class Usuario implements ConIdNumerico {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Indexed(unique = true)
     private String username;
 
-    @Column(nullable = false, unique = true)
+    @Indexed(unique = true, sparse = true)
     private String email;
 
-    @Column(nullable = false)
     private String password;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "usuario_roles",
-            joinColumns = @JoinColumn(name = "usuario_id"),
-            inverseJoinColumns = @JoinColumn(name = "rol_id")
-    )
     private Set<Rol> roles = new HashSet<>();
 
     public Usuario() {}

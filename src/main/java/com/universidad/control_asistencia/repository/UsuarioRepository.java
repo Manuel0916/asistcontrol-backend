@@ -1,10 +1,10 @@
 package com.universidad.control_asistencia.repository;
 
 import com.universidad.control_asistencia.model.Usuario;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
-public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+public interface UsuarioRepository extends MongoRepository<Usuario, Long> {
 
     // Busca el usuario por nombre de usuario
     Optional<Usuario> findByUsername(String username);
