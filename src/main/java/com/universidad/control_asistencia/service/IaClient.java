@@ -2,10 +2,13 @@ package com.universidad.control_asistencia.service;
 
 import com.universidad.control_asistencia.exception.IaNoDisponibleException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriBuilder;
@@ -14,6 +17,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Cliente HTTP hacia el servicio de IA en Python (FastAPI).
@@ -26,6 +30,12 @@ public class IaClient {
     };
     private static final ParameterizedTypeReference<List<Map<String, Object>>> LISTA = new ParameterizedTypeReference<>() {
     };
+
+    /** Tiempo máximo esperando a que la IA despierte (la app espera 90 s en total). */
+    private static final long ESPERA_MAXIMA_MS = 70_000;
+    private static final long PAUSA_MS = 5_000;
+    private static final String DESPERTANDO =
+            "El servicio de IA está despertando (en la nube gratis se duerme sin uso). Intenta de nuevo en unos segundos.";
 
     private final RestClient http;
 
@@ -55,18 +65,65 @@ public class IaClient {
                 .retrieve().body(MAPA));
     }
 
-    private <T> T ejecutar(java.util.function.Supplier<T> llamada) {
-        try {
-            return llamada.get();
-        } catch (RestClientResponseException e) {
-            // FastAPI responde {"detail": "..."}: se reenvía ese mensaje
-            String detalle = e.getResponseBodyAsString();
-            int i = detalle.indexOf("\"detail\":\"");
-            String msg = i >= 0 ? detalle.substring(i + 10, Math.max(i + 10, detalle.indexOf('"', i + 10))) : detalle;
-            throw new IaNoDisponibleException("Servicio de IA: " + msg, e.getStatusCode().value());
-        } catch (Exception e) {
-            throw new IaNoDisponibleException(
-                    "El servicio de IA no responde. Verifica que esté encendido (puede tardar si estaba dormido).", 503);
+    /**
+     * Al arrancar el backend se "despierta" al servicio de IA en segundo plano: en la nube gratis
+     * ambos se duermen tras 15 min sin uso, y así la IA ya está lista cuando el usuario la necesita.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void despertarIa() {
+        Thread.ofVirtual().start(() -> {
+            try {
+                get("/salud");
+            } catch (Exception ignorada) {
+                // Si no responde no pasa nada: la primera consulta volverá a intentarlo
+            }
+        });
+    }
+
+    private <T> T ejecutar(Supplier<T> llamada) {
+        long limite = System.currentTimeMillis() + ESPERA_MAXIMA_MS;
+        while (true) {
+            try {
+                return llamada.get();
+            } catch (RestClientResponseException e) {
+                int status = e.getStatusCode().value();
+                // 502/503/504: la nube responde esto mientras la IA "despierta" -> esperar y reintentar
+                if (status >= 502 && status <= 504 && esperar(limite)) {
+                    continue;
+                }
+                throw new IaNoDisponibleException(mensaje(e), status >= 500 ? 503 : status);
+            } catch (ResourceAccessException e) {
+                // No se pudo conectar (servicio arrancando): esperar y reintentar
+                if (esperar(limite)) {
+                    continue;
+                }
+                throw new IaNoDisponibleException(DESPERTANDO, 503);
+            }
         }
+    }
+
+    /** Espera unos segundos antes de reintentar; false si ya se acabó el tiempo. */
+    private static boolean esperar(long limite) {
+        if (System.currentTimeMillis() + PAUSA_MS > limite) {
+            return false;
+        }
+        try {
+            Thread.sleep(PAUSA_MS);
+            return true;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    /** FastAPI responde {"detail": "..."}: se reenvía ese mensaje. Si es una página HTML, un mensaje claro. */
+    private static String mensaje(RestClientResponseException e) {
+        String cuerpo = e.getResponseBodyAsString();
+        int i = cuerpo.indexOf("\"detail\":\"");
+        if (i >= 0) {
+            int fin = cuerpo.indexOf('"', i + 10);
+            return "Servicio de IA: " + cuerpo.substring(i + 10, Math.max(i + 10, fin));
+        }
+        return DESPERTANDO;
     }
 }
