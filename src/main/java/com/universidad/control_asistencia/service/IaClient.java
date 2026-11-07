@@ -71,6 +71,11 @@ public class IaClient {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void despertarIa() {
+        despertarEnSegundoPlano();
+    }
+
+    /** Hace una consulta rápida a la IA sin esperar la respuesta (sirve para despertarla). */
+    public void despertarEnSegundoPlano() {
         Thread.ofVirtual().start(() -> {
             try {
                 get("/salud");

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface AsistenciaAlumnoInterface {
-    /** Opciones de los selectores (vienen del servicio de IA). */
+    /** Opciones de los selectores (alumnos y clases de MongoDB; días y meses fijos). */
     Map<String, List<String>> cargarOpciones();
 
     /** Predice si el alumno faltará; llena estado, probabilidad y nivel del DTO. */
