@@ -24,3 +24,6 @@ HELP.md
 .vscode/
 # Compilados (Render los genera)
 target/
+
+# Copia de la base de datos para Docker (tiene datos de usuarios: no se sube)
+docker/mongo/*.archive.gz

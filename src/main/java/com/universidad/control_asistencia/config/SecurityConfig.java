@@ -21,7 +21,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
 import jakarta.servlet.ServletException;
@@ -76,6 +78,17 @@ public class SecurityConfig {
         // sesión después de que la respuesta ya había sido enviada.
         CookieCsrfTokenRepository csrfRepo = CookieCsrfTokenRepository.withHttpOnlyFalse();
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+
+        // FIX: Spring Security 6 crea el token CSRF "tarde" (al pintar la página). Si la página
+        // es grande, la respuesta ya salió y la cookie XSRF-TOKEN nunca llega al navegador,
+        // así que el formulario de login fallaba. Este filtro crea el token al inicio.
+        http.addFilterAfter((req, res, chain) -> {
+            Object token = req.getAttribute(CsrfToken.class.getName());
+            if (token instanceof CsrfToken csrf) {
+                csrf.getToken();
+            }
+            chain.doFilter(req, res);
+        }, BasicAuthenticationFilter.class);
 
         http
                 // CSRF con cookies en lugar de sesión

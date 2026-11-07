@@ -1,0 +1,59 @@
+# AsistControl completo en Docker: proyecto web (Spring Boot) + IA (Python) + MongoDB.
+# Uso (dentro de esta carpeta):   docker compose up --build
+# Luego abre http://localhost:8080
+#
+# La carpeta del servicio de IA debe estar al lado de esta:
+#   proyecto aula/
+#     control_asistencias-main/   <- aquí
+#     control_asistencias_ia/
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: asistcontrol-mongo
+    volumes:
+      - mongo-datos:/data/db
+      # La primera vez carga los datos del proyecto (usuarios, roles y asistencias)
+      - ./docker/mongo:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "27018:27017"   # 27018 para no chocar con el MongoDB instalado en el PC
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ia:
+    build: ../control_asistencias_ia
+    container_name: asistcontrol-ia
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: asistcontrol
+      IA_API_KEY: clave-ia-desarrollo
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build: .
+    container_name: asistcontrol-web
+    environment:
+      MONGO_URI: mongodb://mongo:27017/asistcontrol
+      IA_URL: http://ia:8000
+      IA_API_KEY: clave-ia-desarrollo
+      # ControlBot usa el Ollama instalado en el PC (si está prendido)
+      OLLAMA_URL: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      ia:
+        condition: service_started
+
+volumes:
+  mongo-datos:
